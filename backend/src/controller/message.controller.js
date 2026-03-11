@@ -112,21 +112,25 @@ exports.getLatestMessagesFromChatByUser = async (req, reply) => {
 exports.getChatMessages = async (req, reply) => {
   const { senderId, receiverId } = req.params;
 
-  if (!userId) {
-    return reply.code(400).send({ error: 'User ID is required' });
+  if (!senderId || !receiverId) {
+    return reply.code(400).send({ error: 'Sender ID and Receiver ID are required' });
   }
 
   try {
     const messages = await Message.find({
-      $and: [{ sender: senderId }, { receiver: receiverId }]
+      $or: [
+        { sender: senderId, receiver: receiverId },
+        { sender: receiverId, receiver: senderId }
+      ]
     })
-      .populate('sender', 'username')
-      .populate('receiver', 'username')
-      .sort({ timestamp: -1 });
+      .populate('sender', 'username name')
+      .populate('receiver', 'username name')
+      .sort({ timestamp: 1 });
 
     reply.send(messages);
   } catch (error) {
-    reply.code(500).send({ error: 'Failed to retrieve messages for user' });
+    console.error(error);
+    reply.code(500).send({ error: 'Failed to retrieve messages' });
   }
 };
 

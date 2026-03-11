@@ -1,7 +1,7 @@
 import ChatMessages from "./ChatMessages";
 import ChatInput from "./ChatInput";
 
-const ChatWindow = ({ onSendMessage, selectedUser }) => {
+const ChatWindow = ({ onSendMessage, selectedUser, messages, currentUser }) => {
   return (
     <main className="flex-1 flex flex-col">
       <div className="p-4 border-b border-base-300 bg-base-100 flex items-center">
@@ -9,7 +9,7 @@ const ChatWindow = ({ onSendMessage, selectedUser }) => {
           {selectedUser ? `Chat with ${selectedUser.name}` : "Chat Room"}
         </h2>
       </div>
-      <ChatMessages />
+      <ChatMessages messages={messages} currentUser={currentUser} />
       <ChatInput onSendMessage={onSendMessage} />
     </main>
   );

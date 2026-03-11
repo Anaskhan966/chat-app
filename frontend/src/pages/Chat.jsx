@@ -8,6 +8,7 @@ const Chat = () => {
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
+  const [messages, setMessages] = useState([]);
 
   const closeModal = () => setIsModalOpen(false);
   const openModal = () => setIsModalOpen(true);
@@ -35,6 +36,28 @@ const Chat = () => {
     fetchUsers();
   }, []);
 
+  // Fetch messages when selectedUser changes
+  useEffect(() => {
+    const fetchMessages = async () => {
+      if (!selectedUser || !currentUser) return;
+      try {
+        const response = await fetch(
+          `http://localhost:3000/api/messages/${currentUser._id}/${selectedUser._id}`,
+        );
+        const data = await response.json();
+        setMessages(data);
+      } catch (error) {
+        console.error("Failed to fetch messages:", error);
+      }
+    };
+    fetchMessages();
+  }, [selectedUser, currentUser]);
+
+  const handleUserCreated = (newUser) => {
+    setUsers((prev) => [...prev, newUser]);
+    setSelectedUser(newUser);
+  };
+
   const handleSendMessage = async (content) => {
     if (!selectedUser || !currentUser) return;
 
@@ -54,7 +77,8 @@ const Chat = () => {
       if (response.ok) {
         const newMessage = await response.json();
         console.log("Message sent:", newMessage);
-        // Here you would typically update the messages state to show the new message
+        // Optimistically add the message to the list
+        setMessages((prev) => [...prev, newMessage]);
       } else {
         console.error("Failed to send message");
       }
@@ -74,8 +98,14 @@ const Chat = () => {
       <ChatWindow
         onSendMessage={handleSendMessage}
         selectedUser={selectedUser}
+        messages={messages}
+        currentUser={currentUser}
       />
-      <NewChatModal isOpen={isModalOpen} onClose={closeModal} />
+      <NewChatModal
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        onUserCreated={handleUserCreated}
+      />
     </div>
   );
 };

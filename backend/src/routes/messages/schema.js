@@ -80,3 +80,43 @@ exports.deleteMessageSchema = {
         }
     }
 };
+
+exports.getChatMessagesSchema = {
+    params: {
+        type: 'object',
+        properties: {
+            senderId: { type: 'string' },
+            receiverId: { type: 'string' }
+        },
+        required: ['senderId', 'receiverId']
+    },
+    response: {
+        200: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: {
+                    _id: { type: 'string' },
+                    sender: { 
+                        type: 'object',
+                        properties: {
+                            _id: { type: 'string' },
+                            username: { type: 'string' },
+                            name: { type: 'string' }
+                        }
+                    },
+                    receiver: { 
+                        type: 'object',
+                        properties: {
+                            _id: { type: 'string' },
+                            username: { type: 'string' },
+                            name: { type: 'string' }
+                        }
+                    },
+                    content: { type: 'string' },
+                    timestamp: { type: 'string', format: 'date-time' }
+                }
+            }
+        }
+    }
+};
