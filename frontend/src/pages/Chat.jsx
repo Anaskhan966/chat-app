@@ -45,7 +45,11 @@ const Chat = () => {
           `http://localhost:3000/api/messages/${currentUser._id}/${selectedUser._id}`,
         );
         const data = await response.json();
-        setMessages(data);
+        // Ensure initial messages are sorted
+        const sortedData = data.sort(
+          (a, b) => new Date(a.timestamp) - new Date(b.timestamp),
+        );
+        setMessages(sortedData);
       } catch (error) {
         console.error("Failed to fetch messages:", error);
       }
@@ -58,34 +62,79 @@ const Chat = () => {
     setSelectedUser(newUser);
   };
 
-  const handleSendMessage = async (content) => {
+  const sendMessageApi = async (content) => {
+    const response = await fetch("http://localhost:3000/api/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        sender: currentUser._id,
+        receiver: selectedUser._id,
+        content: content,
+      }),
+    });
+    if (!response.ok) throw new Error("Failed to send message");
+    return await response.json();
+  };
+
+  const handleSendMessage = async (content, temporaryId = null) => {
     if (!selectedUser || !currentUser) return;
 
-    try {
-      const response = await fetch("http://localhost:3000/api/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          sender: currentUser._id,
-          receiver: selectedUser._id,
-          content: content,
-        }),
-      });
+    const tempId = temporaryId || Date.now().toString();
 
-      if (response.ok) {
-        const newMessage = await response.json();
-        console.log("Message sent:", newMessage);
-        // Optimistically add the message to the list
-        setMessages((prev) => [...prev, newMessage]);
-      } else {
-        console.error("Failed to send message");
-      }
+    // 1. Update state to 'sending'
+    if (!temporaryId) {
+      const optimisticMessage = {
+        _id: tempId,
+        sender: currentUser._id,
+        receiver: selectedUser._id,
+        content: content,
+        timestamp: new Date().toISOString(),
+        status: "sending",
+      };
+      setMessages((prev) => [...prev, optimisticMessage]);
+    } else {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m._id === tempId ? { ...m, status: "sending", error: false } : m,
+        ),
+      );
+    }
+
+    try {
+      const newMessage = await sendMessageApi(content);
+
+      // 2. Update state to 'sent' with real data
+      setMessages((prev) => {
+        const updated = prev.map((m) =>
+          m._id === tempId ? { ...newMessage, status: "sent" } : m,
+        );
+
+        // 3. If this was a successful send, trigger auto-retry for others sequentially
+        const firstFailed = updated.find((m) => m.status === "error");
+        if (firstFailed) {
+          // Use setTimeout to avoid doing this during the state update itself
+          setTimeout(
+            () => handleSendMessage(firstFailed.content, firstFailed._id),
+            0,
+          );
+        }
+
+        return updated;
+      });
     } catch (error) {
       console.error("Error sending message:", error);
+      setMessages((prev) =>
+        prev.map((m) => (m._id === tempId ? { ...m, status: "error" } : m)),
+      );
     }
   };
+
+  // Sort messages by timestamp for display
+  const displayMessages = [...messages].sort(
+    (a, b) => new Date(a.timestamp) - new Date(b.timestamp),
+  );
 
   return (
     <div className="flex h-[calc(100vh-64px)] bg-base-200">
@@ -97,8 +146,9 @@ const Chat = () => {
       />
       <ChatWindow
         onSendMessage={handleSendMessage}
+        onRetryMessage={(msg) => handleSendMessage(msg.content, msg._id)}
         selectedUser={selectedUser}
-        messages={messages}
+        messages={displayMessages}
         currentUser={currentUser}
       />
       <NewChatModal
