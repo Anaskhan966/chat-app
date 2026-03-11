@@ -1,17 +1,36 @@
 import "./App.css";
 import React from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
+import {
+  SignedIn,
+  SignedOut,
+  RedirectToSignIn,
+} from "@clerk/clerk-react";
 import Chat from "./pages/Chat";
 import Layout from "./components/layout";
+import { SignInPage, SignUpPage } from "./pages/Auth";
 
 function App() {
   return (
     <Routes>
-      {/* <Route path="/login" element={<Login />} /> */}
-      <Route element={<Layout />}>
-        <Route path="/chat" element={<Chat />} />
-        {/* <Route path="/settings" element={<Settings />} /> */}
-      </Route>
+      <Route path="/sign-in/*" element={<SignInPage />} />
+      <Route path="/sign-up/*" element={<SignUpPage />} />
+      <Route
+        path="/chat"
+        element={
+          <>
+            <SignedIn>
+              <Layout>
+                <Chat />
+              </Layout>
+            </SignedIn>
+            <SignedOut>
+              <RedirectToSignIn />
+            </SignedOut>
+          </>
+        }
+      />
+      <Route path="/" element={<Navigate to="/chat" replace />} />
     </Routes>
   );
 }

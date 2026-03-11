@@ -2,8 +2,11 @@ import ChatSidebar from "../components/Chat/ChatSidebar";
 import ChatWindow from "../components/Chat/ChatWindow";
 import { useState, useEffect } from "react";
 import NewChatModal from "../components/Modal/NewChatModal";
+import { useUser, useAuth } from "@clerk/clerk-react";
 
 const Chat = () => {
+  const { user: clerkUser } = useUser();
+  const { getToken } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -13,36 +16,60 @@ const Chat = () => {
   const closeModal = () => setIsModalOpen(false);
   const openModal = () => setIsModalOpen(true);
 
-  // Fetch users and set a dummy current user for integration
+  // Sync Clerk user with backend and fetch users
   useEffect(() => {
-    const fetchUsers = async () => {
+    const syncAndFetch = async () => {
+      if (!clerkUser) return;
+
       try {
-        const response = await fetch("http://localhost:3000/api/users");
-        const data = await response.json();
-        setUsers(data);
-        if (data.length > 0) {
-          // Setting the first user as current user for demo purposes
-          // In a real app, this would come from auth state
-          setCurrentUser(data[0]);
-          // Select the second user as the default chat contact if available
-          if (data.length > 1) {
-            setSelectedUser(data[1]);
-          }
+        const token = await getToken();
+        
+        // 1. Sync Clerk user with backend
+        const syncResponse = await fetch("http://localhost:3000/api/users", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            name: clerkUser.fullName || clerkUser.username || clerkUser.emailAddresses[0].emailAddress.split('@')[0],
+            username: clerkUser.username || clerkUser.emailAddresses[0].emailAddress.split('@')[0],
+            email: clerkUser.emailAddresses[0].emailAddress,
+            password: "clerk-auth-user", // placeholder
+            clerkId: clerkUser.id,
+          }),
+        });
+        
+        const loggedInUser = await syncResponse.json();
+        setCurrentUser(loggedInUser);
+
+        // 2. Fetch all users
+        const usersResponse = await fetch("http://localhost:3000/api/users", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const allUsers = await usersResponse.json();
+        setUsers(allUsers);
+        
+        if (allUsers.length > 0) {
+          const firstOther = allUsers.find(u => u._id !== loggedInUser._id);
+          if (firstOther) setSelectedUser(firstOther);
         }
       } catch (error) {
-        console.error("Failed to fetch users:", error);
+        console.error("Failed to sync/fetch users:", error);
       }
     };
-    fetchUsers();
-  }, []);
+    syncAndFetch();
+  }, [clerkUser, getToken]);
 
   // Fetch messages when selectedUser changes
   useEffect(() => {
     const fetchMessages = async () => {
       if (!selectedUser || !currentUser) return;
       try {
+        const token = await getToken();
         const response = await fetch(
           `http://localhost:3000/api/messages/${currentUser._id}/${selectedUser._id}`,
+          { headers: { Authorization: `Bearer ${token}` } }
         );
         const data = await response.json();
         // Ensure initial messages are sorted
@@ -55,7 +82,7 @@ const Chat = () => {
       }
     };
     fetchMessages();
-  }, [selectedUser, currentUser]);
+  }, [selectedUser, currentUser, getToken]);
 
   const handleUserCreated = (newUser) => {
     setUsers((prev) => [...prev, newUser]);
@@ -63,10 +90,12 @@ const Chat = () => {
   };
 
   const sendMessageApi = async (content) => {
+    const token = await getToken();
     const response = await fetch("http://localhost:3000/api/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
         sender: currentUser._id,

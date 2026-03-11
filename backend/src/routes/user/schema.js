@@ -23,7 +23,8 @@ exports.createUser = {
       username: { type: 'string' },
       password: { type: 'string' },
       email: { type: 'string', format: 'email' },
-      name: { type: 'string' }
+      name: { type: 'string' },
+      clerkId: { type: 'string' }
     }
   },
   response: {
@@ -33,7 +34,18 @@ exports.createUser = {
         _id: { type: 'string' },
         username: { type: 'string' },
         email: { type: 'string', format: 'email' },
-        name: { type: 'string' }
+        name: { type: 'string' },
+        clerkId: { type: 'string' }
+      }
+    },
+    200: {
+      type: 'object',
+      properties: {
+        _id: { type: 'string' },
+        username: { type: 'string' },
+        email: { type: 'string', format: 'email' },
+        name: { type: 'string' },
+        clerkId: { type: 'string' }
       }
     }
   }
