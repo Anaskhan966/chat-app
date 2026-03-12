@@ -23,7 +23,31 @@ exports.addContact = async (userId, contactId) => {
     ).populate('contacts', 'username name email');
 }
 
+const Message = require('../models/message.model');
+
 exports.getContacts = async (userId) => {
     const user = await User.findById(userId).populate('contacts', 'username name email');
-    return user ? user.contacts : [];
+    if (!user) return [];
+
+    const contactsWithLastMessage = await Promise.all(user.contacts.map(async (contact) => {
+        const lastMessage = await Message.findOne({
+            $or: [
+                { sender: userId, receiver: contact._id },
+                { sender: contact._id, receiver: userId }
+            ]
+        }).sort({ timestamp: -1 });
+
+        return {
+            ...contact.toObject(),
+            lastMessage: lastMessage ? lastMessage.content : null,
+            lastMessageTime: lastMessage ? lastMessage.timestamp : null
+        };
+    }));
+
+    // Sort by last message time, most recent first
+    return contactsWithLastMessage.sort((a, b) => {
+        if (!a.lastMessageTime) return 1;
+        if (!b.lastMessageTime) return -1;
+        return new Date(b.lastMessageTime) - new Date(a.lastMessageTime);
+    });
 }

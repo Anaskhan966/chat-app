@@ -148,6 +148,15 @@ const Chat = () => {
     try {
       const newMessage = await sendMessageApi(content);
 
+      // Refresh contacts to show new last message
+      const token = await getToken();
+      const contactsResponse = await fetch(
+        `http://localhost:3000/api/users/${currentUser._id}/contacts`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      const contacts = await contactsResponse.json();
+      setUsers(contacts);
+
       // 2. Update state to 'sent' with real data
       setMessages((prev) => {
         const updated = prev.map((m) =>

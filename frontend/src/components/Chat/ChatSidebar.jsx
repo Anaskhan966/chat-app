@@ -21,10 +21,20 @@ const ChatSidebar = ({ users, onAddUser, onSelectUser, selectedUser }) => {
                 src="https://img.daisyui.com/images/profile/demo/1@94.webp"
                 alt={user.name}
               />
-              <div className="flex-1">
-                <div className="font-medium">{user.name || "User"}</div>
+              <div className="flex-1 overflow-hidden">
+                <div className="flex justify-between items-baseline">
+                  <div className="font-medium truncate">{user.name || "User"}</div>
+                  {user.lastMessageTime && (
+                    <div className="text-[10px] opacity-40">
+                      {new Date(user.lastMessageTime).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </div>
+                  )}
+                </div>
                 <div className="text-xs opacity-60 truncate">
-                  Latest message...
+                  {user.lastMessage || "No messages yet"}
                 </div>
               </div>
             </li>
