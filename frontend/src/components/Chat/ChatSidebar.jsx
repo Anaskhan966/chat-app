@@ -1,6 +1,13 @@
 import { Plus, Search } from "lucide-react";
 
-const ChatSidebar = ({ users, onAddUser, onSelectUser, selectedUser }) => {
+const ChatSidebar = ({
+  users,
+  onAddUser,
+  onSelectUser,
+  selectedUser,
+  searchTerm,
+  onSearchChange,
+}) => {
   return (
     <aside className="w-80 bg-white/5 flex flex-col relative border-r border-white/10">
       <div className="p-6">
@@ -22,6 +29,8 @@ const ChatSidebar = ({ users, onAddUser, onSelectUser, selectedUser }) => {
             type="text"
             placeholder="Search vibes..."
             className="w-full bg-white/5 border border-white/5 rounded-2xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-primary/50 transition-all"
+            value={searchTerm}
+            onChange={(e) => onSearchChange(e.target.value)}
           />
         </div>
       </div>

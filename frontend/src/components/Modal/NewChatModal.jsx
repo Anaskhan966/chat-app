@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "@clerk/clerk-react";
 import { Search, X, UserPlus, Loader2 } from "lucide-react";
 
@@ -13,17 +13,26 @@ const NewChatModal = ({
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isAdding, setIsAdding] = useState(null); // Track which user is being added
 
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    if (!searchTerm.trim()) return;
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchTerm.trim()) {
+        performSearch(searchTerm.trim());
+      } else {
+        setSearchResults([]);
+      }
+    }, 500);
 
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const performSearch = async (term) => {
     setIsLoading(true);
     try {
       const response = await fetch(
-        `http://localhost:3000/api/users?search=${encodeURIComponent(
-          searchTerm.trim(),
-        )}`,
+        `http://localhost:3000/api/users?search=${encodeURIComponent(term)}`,
       );
 
       if (response.ok) {
@@ -42,9 +51,17 @@ const NewChatModal = ({
     }
   };
 
-  const handleSelectUser = async (user) => {
-    if (!currentUser) return;
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchTerm.trim()) {
+      performSearch(searchTerm.trim());
+    }
+  };
 
+  const handleSelectUser = async (user) => {
+    if (!currentUser || isAdding) return;
+
+    setIsAdding(user._id);
     try {
       const token = await getToken();
       const response = await fetch(
@@ -65,12 +82,15 @@ const NewChatModal = ({
       }
     } catch (error) {
       console.error("Error adding contact:", error);
+    } finally {
+      setIsAdding(null);
     }
   };
 
   const handleClose = () => {
     setSearchTerm("");
     setSearchResults([]);
+    setIsAdding(null);
     onClose();
   };
 
@@ -88,8 +108,8 @@ const NewChatModal = ({
       <div className="relative w-full max-w-md bg-neutral border border-white/10 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-2xl font-black text-white italic tracking-tighter">
-              FIND SQUAD
+            <h3 className="text-2xl font-black text-white italic tracking-tighter uppercase">
+              Find Squad
             </h3>
             <button
               onClick={handleClose}
@@ -140,16 +160,21 @@ const NewChatModal = ({
                     </div>
                     <button
                       onClick={() => handleSelectUser(user)}
-                      className="p-3 rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all active:scale-90"
+                      disabled={isAdding === user._id}
+                      className="p-3 rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <UserPlus className="w-5 h-5" />
+                      {isAdding === user._id ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      ) : (
+                        <UserPlus className="w-5 h-5" />
+                      )}
                     </button>
                   </div>
                 ))
               : searchTerm &&
                 !isLoading && (
                   <div className="py-12 text-center">
-                    <div className="text-4xl mb-4">🛸</div>
+                    <div className="text-4xl mb-4 text-white/30">🛸</div>
                     <p className="text-white/40 font-medium italic">
                       No vibe found at this frequency.
                     </p>

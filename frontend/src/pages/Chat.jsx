@@ -1,6 +1,6 @@
 import ChatSidebar from "../components/Chat/ChatSidebar";
 import ChatWindow from "../components/Chat/ChatWindow";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import NewChatModal from "../components/Modal/NewChatModal";
 import { useUser, useAuth } from "@clerk/clerk-react";
 
@@ -12,6 +12,7 @@ const Chat = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [messages, setMessages] = useState([]);
+  const [sidebarSearchTerm, setSidebarSearchTerm] = useState("");
 
   const closeModal = () => setIsModalOpen(false);
   const openModal = () => setIsModalOpen(true);
@@ -22,14 +23,9 @@ const Chat = () => {
       if (!clerkUser) return;
 
       try {
-        // Explicitly get the __session token for direct JWT verification
         const token = await getToken();
-        if (!token) {
-          console.warn("No token available yet");
-          return;
-        }
+        if (!token) return;
 
-        // 1. Sync Clerk user with backend
         const syncResponse = await fetch("http://localhost:3000/api/users", {
           method: "POST",
           headers: {
@@ -45,7 +41,7 @@ const Chat = () => {
               clerkUser.username ||
               clerkUser.emailAddresses[0].emailAddress.split("@")[0],
             email: clerkUser.emailAddresses[0].emailAddress,
-            password: "clerk-auth-user", // placeholder
+            password: "clerk-auth-user",
             clerkId: clerkUser.id,
           }),
         });
@@ -53,7 +49,6 @@ const Chat = () => {
         const loggedInUser = await syncResponse.json();
         setCurrentUser(loggedInUser);
 
-        // 2. Fetch only contacts for this user
         const contactsResponse = await fetch(
           `http://localhost:3000/api/users/${loggedInUser._id}/contacts`,
           {
@@ -63,7 +58,7 @@ const Chat = () => {
         const contacts = await contactsResponse.json();
         setUsers(contacts);
 
-        if (contacts.length > 0) {
+        if (contacts.length > 0 && !selectedUser) {
           setSelectedUser(contacts[0]);
         }
       } catch (error) {
@@ -86,7 +81,6 @@ const Chat = () => {
           { headers: { Authorization: `Bearer ${token}` } },
         );
         const data = await response.json();
-        // Ensure initial messages are sorted
         const sortedData = data.sort(
           (a, b) => new Date(a.timestamp) - new Date(b.timestamp),
         );
@@ -99,7 +93,11 @@ const Chat = () => {
   }, [selectedUser, currentUser, getToken]);
 
   const handleUserCreated = (newUser) => {
-    setUsers((prev) => [...prev, newUser]);
+    setUsers((prev) => {
+      const exists = prev.find((u) => u._id === newUser._id);
+      if (exists) return prev;
+      return [newUser, ...prev];
+    });
     setSelectedUser(newUser);
   };
 
@@ -126,7 +124,6 @@ const Chat = () => {
 
     const tempId = temporaryId || Date.now().toString();
 
-    // 1. Update state to 'sending'
     if (!temporaryId) {
       const optimisticMessage = {
         _id: tempId,
@@ -148,7 +145,6 @@ const Chat = () => {
     try {
       const newMessage = await sendMessageApi(content);
 
-      // Refresh contacts to show new last message
       const token = await getToken();
       const contactsResponse = await fetch(
         `http://localhost:3000/api/users/${currentUser._id}/contacts`,
@@ -157,16 +153,13 @@ const Chat = () => {
       const contacts = await contactsResponse.json();
       setUsers(contacts);
 
-      // 2. Update state to 'sent' with real data
       setMessages((prev) => {
         const updated = prev.map((m) =>
           m._id === tempId ? { ...newMessage, status: "sent" } : m,
         );
 
-        // 3. If this was a successful send, trigger auto-retry for others sequentially
         const firstFailed = updated.find((m) => m.status === "error");
         if (firstFailed) {
-          // Use setTimeout to avoid doing this during the state update itself
           setTimeout(
             () => handleSendMessage(firstFailed.content, firstFailed._id),
             0,
@@ -183,18 +176,28 @@ const Chat = () => {
     }
   };
 
-  // Sort messages by timestamp for display
+  const filteredUsers = useMemo(() => {
+    if (!sidebarSearchTerm.trim()) return users;
+    return users.filter(
+      (u) =>
+        u.name?.toLowerCase().includes(sidebarSearchTerm.toLowerCase()) ||
+        u.username?.toLowerCase().includes(sidebarSearchTerm.toLowerCase()),
+    );
+  }, [users, sidebarSearchTerm]);
+
   const displayMessages = [...messages].sort(
     (a, b) => new Date(a.timestamp) - new Date(b.timestamp),
   );
 
   return (
-    <div className="flex h-[calc(100vh-64px)] bg-base-200">
+    <div className="flex h-[calc(100vh-128px)] bg-transparent">
       <ChatSidebar
-        users={users.filter((u) => u._id !== currentUser?._id)}
+        users={filteredUsers.filter((u) => u._id !== currentUser?._id)}
         onAddUser={openModal}
         onSelectUser={setSelectedUser}
         selectedUser={selectedUser}
+        searchTerm={sidebarSearchTerm}
+        onSearchChange={setSidebarSearchTerm}
       />
       <ChatWindow
         onSendMessage={handleSendMessage}
