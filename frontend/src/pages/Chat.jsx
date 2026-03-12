@@ -22,8 +22,13 @@ const Chat = () => {
       if (!clerkUser) return;
 
       try {
+        // Explicitly get the __session token for direct JWT verification
         const token = await getToken();
-        
+        if (!token) {
+          console.warn("No token available yet");
+          return;
+        }
+
         // 1. Sync Clerk user with backend
         const syncResponse = await fetch("http://localhost:3000/api/users", {
           method: "POST",
@@ -32,26 +37,31 @@ const Chat = () => {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
-            name: clerkUser.fullName || clerkUser.username || clerkUser.emailAddresses[0].emailAddress.split('@')[0],
-            username: clerkUser.username || clerkUser.emailAddresses[0].emailAddress.split('@')[0],
+            name:
+              clerkUser.fullName ||
+              clerkUser.username ||
+              clerkUser.emailAddresses[0].emailAddress.split("@")[0],
+            username:
+              clerkUser.username ||
+              clerkUser.emailAddresses[0].emailAddress.split("@")[0],
             email: clerkUser.emailAddresses[0].emailAddress,
             password: "clerk-auth-user", // placeholder
             clerkId: clerkUser.id,
           }),
         });
-        
+
         const loggedInUser = await syncResponse.json();
         setCurrentUser(loggedInUser);
 
         // 2. Fetch all users
         const usersResponse = await fetch("http://localhost:3000/api/users", {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
         });
         const allUsers = await usersResponse.json();
         setUsers(allUsers);
-        
+
         if (allUsers.length > 0) {
-          const firstOther = allUsers.find(u => u._id !== loggedInUser._id);
+          const firstOther = allUsers.find((u) => u._id !== loggedInUser._id);
           if (firstOther) setSelectedUser(firstOther);
         }
       } catch (error) {
@@ -67,9 +77,11 @@ const Chat = () => {
       if (!selectedUser || !currentUser) return;
       try {
         const token = await getToken();
+        if (!token) return;
+
         const response = await fetch(
           `http://localhost:3000/api/messages/${currentUser._id}/${selectedUser._id}`,
-          { headers: { Authorization: `Bearer ${token}` } }
+          { headers: { Authorization: `Bearer ${token}` } },
         );
         const data = await response.json();
         // Ensure initial messages are sorted

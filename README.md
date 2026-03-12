@@ -32,8 +32,9 @@ The project is divided into two main parts:
    ```env
    PORT=3000
    MONGO_URI='mongodb://localhost:27017/chat-app'
+   CLERK_SECRET_KEY=your_clerk_secret_key
    ```
-   *(Adjust the `MONGO_URI` if your MongoDB setup is different.)*
+   *(Adjust the `MONGO_URI` if your MongoDB setup is different. Obtain your `CLERK_SECRET_KEY` from the Clerk Dashboard.)*
 
 4. Start the backend server:
    - For development (with nodemon):
@@ -58,7 +59,14 @@ The project is divided into two main parts:
    npm install
    ```
 
-3. Start the development server:
+3. Configure environment variables:
+   Create a `.env` file in the `frontend/` directory with the following content:
+   ```env
+   VITE_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
+   ```
+   *(Obtain your `VITE_CLERK_PUBLISHABLE_KEY` from the Clerk Dashboard.)*
+
+4. Start the development server:
    ```bash
    npm run dev
    ```
@@ -66,6 +74,8 @@ The project is divided into two main parts:
 
 ## Features
 
+- **Authentication**: Secure user authentication using [Clerk](https://clerk.com/).
+- **Protected APIs**: Backend routes are secured using JWT verification with the Clerk SDK.
 - **Real-time Messaging**: Instant message delivery using Socket.io.
 - **User Management**: Create and manage users.
 - **Chat Interface**: Clean and responsive UI built with Tailwind CSS and DaisyUI.

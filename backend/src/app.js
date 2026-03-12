@@ -16,7 +16,14 @@ app.register(userRoutes, { prefix: '/api/users' });
 
 // Protected message routes
 app.register(async (instance) => {
-  instance.addHook('preHandler', instance.clerkAuth);
+  instance.addHook('preHandler', async (request, reply) => {
+    try {
+      await instance.clerkAuth(request, reply);
+    } catch (err) {
+      request.log.error(err, 'clerkAuth hook failed');
+      return reply.code(401).send({ error: 'Unauthorized', details: err.message });
+    }
+  });
   instance.register(messageRoutes);
 }, { prefix: '/api/messages' });
 
