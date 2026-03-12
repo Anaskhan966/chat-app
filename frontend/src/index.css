@@ -1,2 +1,55 @@
-@import  "tailwindcss";
-@plugin  "daisyui";
+@import "tailwindcss";
+@plugin "daisyui";
+
+@theme {
+  --color-primary: #ff007f;
+  --color-secondary: #7000ff;
+  --color-accent: #00f2ff;
+  --color-neutral: #1a1a1a;
+  --color-base-100: #0a0a0a;
+  --color-base-200: #121212;
+  --radius-xl: 1.5rem;
+  --radius-2xl: 2rem;
+}
+
+@layer base {
+  body {
+    @apply bg-black text-white selection:bg-primary/30;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl;
+  }
+  
+  .genz-gradient {
+    @apply bg-gradient-to-br from-primary via-secondary to-accent;
+  }
+
+  .genz-btn {
+    @apply rounded-full px-6 py-2 font-bold transition-all active:scale-95 hover:shadow-[0_0_20px_rgba(255,0,127,0.4)];
+  }
+
+  .chat-bubble-genz-me {
+    @apply bg-gradient-to-r from-primary to-secondary text-white border-none rounded-2xl rounded-tr-none;
+  }
+
+  .chat-bubble-genz-them {
+    @apply bg-white/10 backdrop-blur-md text-white border border-white/5 rounded-2xl rounded-tl-none;
+  }
+}
+
+/* Custom scrollbar for Gen Z look */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-white/10 rounded-full hover:bg-white/20 transition-colors;
+}

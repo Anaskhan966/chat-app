@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-
 import { useAuth } from "@clerk/clerk-react";
+import { Search, X, UserPlus, Loader2 } from "lucide-react";
 
 const NewChatModal = ({
   isOpen,
@@ -28,18 +28,15 @@ const NewChatModal = ({
 
       if (response.ok) {
         const users = await response.json();
-        // Filter out users who are already in existingUsers list
         const filteredUsers = users.filter(
           (user) =>
+            user._id !== currentUser?._id &&
             !existingUsers.some((existing) => existing._id === user._id),
         );
         setSearchResults(filteredUsers);
-      } else {
-        alert("Failed to search users");
       }
     } catch (error) {
       console.error("Error searching users:", error);
-      alert("Failed to connect to the server");
     } finally {
       setIsLoading(false);
     }
@@ -64,98 +61,112 @@ const NewChatModal = ({
 
       if (response.ok) {
         onUserCreated(user);
-        setSearchTerm("");
-        setSearchResults([]);
-        onClose();
-      } else {
-        alert("Failed to add contact");
+        handleClose();
       }
     } catch (error) {
       console.error("Error adding contact:", error);
-      alert("Failed to connect to the server");
     }
   };
 
+  const handleClose = () => {
+    setSearchTerm("");
+    setSearchResults([]);
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
   return (
-    <>
-      <input
-        type="checkbox"
-        id="new-chat-modal"
-        className="modal-toggle"
-        checked={isOpen}
-        readOnly
-      />
-      <div className="modal">
-        <div className="modal-box">
-          <h3 className="font-bold text-lg mb-4">Add New Contact</h3>
-          <form onSubmit={handleSearch}>
-            <div className="form-control w-full mb-4">
-              <label className="label">
-                <span className="label-text">Search by Username or Email</span>
-              </label>
-              <div className="join">
-                <input
-                  type="text"
-                  placeholder="johndoe or john@example.com"
-                  className="input input-bordered w-full join-item"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  required
-                />
-                <button
-                  type="submit"
-                  className={`btn btn-primary join-item ${
-                    isLoading ? "loading" : ""
-                  }`}
-                  disabled={isLoading}
-                >
-                  {isLoading ? "" : "Search"}
-                </button>
-              </div>
-            </div>
-          </form>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/60 backdrop-blur-md transition-opacity"
+        onClick={handleClose}
+      ></div>
 
-          <div className="mt-4 max-h-60 overflow-y-auto">
-            {searchResults.length > 0 ? (
-              <ul className="menu bg-base-200 w-full rounded-box">
-                {searchResults.map((user) => (
-                  <li key={user._id}>
-                    <button onClick={() => handleSelectUser(user)}>
-                      <div className="flex flex-col items-start">
-                        <span className="font-bold">{user.name}</span>
-                        <span className="text-sm opacity-70">
-                          @{user.username}
-                        </span>
-                      </div>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              searchTerm &&
-              !isLoading && (
-                <p className="text-center opacity-70">No users found</p>
-              )
-            )}
-          </div>
-
-          <div className="modal-action">
+      {/* Modal Content */}
+      <div className="relative w-full max-w-md bg-neutral border border-white/10 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-2xl font-black text-white italic tracking-tighter">
+              FIND SQUAD
+            </h3>
             <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={() => {
-                setSearchTerm("");
-                setSearchResults([]);
-                onClose();
-              }}
-              disabled={isLoading}
+              onClick={handleClose}
+              className="p-2 rounded-full hover:bg-white/5 text-white/40 hover:text-white transition-colors"
             >
-              Close
+              <X className="w-6 h-6" />
             </button>
           </div>
+
+          <form onSubmit={handleSearch} className="relative mb-6 group">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20 group-focus-within:text-primary transition-colors" />
+            <input
+              type="text"
+              placeholder="Search by name or @handle"
+              className="w-full bg-white/5 border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-primary/50 transition-all placeholder:text-white/20"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              autoFocus
+            />
+            {isLoading && (
+              <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                <Loader2 className="w-5 h-5 text-primary animate-spin" />
+              </div>
+            )}
+          </form>
+
+          <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+            {searchResults.length > 0
+              ? searchResults.map((user) => (
+                  <div
+                    key={user._id}
+                    className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-primary/30 transition-all group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <img
+                        className="size-12 rounded-xl border border-white/10"
+                        src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`}
+                        alt={user.name}
+                      />
+                      <div>
+                        <div className="font-bold text-white group-hover:text-primary transition-colors">
+                          {user.name}
+                        </div>
+                        <div className="text-xs text-white/40 tracking-wider">
+                          @{user.username}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleSelectUser(user)}
+                      className="p-3 rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all active:scale-90"
+                    >
+                      <UserPlus className="w-5 h-5" />
+                    </button>
+                  </div>
+                ))
+              : searchTerm &&
+                !isLoading && (
+                  <div className="py-12 text-center">
+                    <div className="text-4xl mb-4">🛸</div>
+                    <p className="text-white/40 font-medium italic">
+                      No vibe found at this frequency.
+                    </p>
+                  </div>
+                )}
+          </div>
         </div>
+
+        {!searchTerm && (
+          <div className="p-8 text-center bg-white/[0.02] border-t border-white/5">
+            <p className="text-sm text-white/30 italic">
+              Search for your friends to start vibing together.
+            </p>
+          </div>
+        )}
       </div>
-    </>
+    </div>
   );
 };
 
