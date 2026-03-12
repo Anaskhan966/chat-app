@@ -53,16 +53,18 @@ const Chat = () => {
         const loggedInUser = await syncResponse.json();
         setCurrentUser(loggedInUser);
 
-        // 2. Fetch all users
-        const usersResponse = await fetch("http://localhost:3000/api/users", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const allUsers = await usersResponse.json();
-        setUsers(allUsers);
+        // 2. Fetch only contacts for this user
+        const contactsResponse = await fetch(
+          `http://localhost:3000/api/users/${loggedInUser._id}/contacts`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
+        const contacts = await contactsResponse.json();
+        setUsers(contacts);
 
-        if (allUsers.length > 0) {
-          const firstOther = allUsers.find((u) => u._id !== loggedInUser._id);
-          if (firstOther) setSelectedUser(firstOther);
+        if (contacts.length > 0) {
+          setSelectedUser(contacts[0]);
         }
       } catch (error) {
         console.error("Failed to sync/fetch users:", error);
@@ -196,6 +198,8 @@ const Chat = () => {
         isOpen={isModalOpen}
         onClose={closeModal}
         onUserCreated={handleUserCreated}
+        existingUsers={users}
+        currentUser={currentUser}
       />
     </div>
   );

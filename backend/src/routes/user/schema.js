@@ -1,4 +1,10 @@
 exports.getUsers = {
+  querystring: {
+    type: 'object',
+    properties: {
+      search: { type: 'string' }
+    }
+  },
   response: {
     200: {
       type: 'array',

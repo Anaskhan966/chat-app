@@ -1,4 +1,5 @@
 const Message = require('../models/message.model');
+const User = require('../models/user.model');
 
 exports.getMessages = async (req, reply) => {
   try {
@@ -20,6 +21,11 @@ exports.createMessage = async (req, reply) => {
   }
 
   try {
+    const receiverExists = await User.findById(receiver);
+    if (!receiverExists) {
+      return reply.code(404).send({ error: 'Receiver not found in database' });
+    }
+
     const message = new Message({
       sender,
       receiver,
